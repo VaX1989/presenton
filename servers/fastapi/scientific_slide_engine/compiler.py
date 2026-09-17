@@ -2,10 +2,10 @@ from __future__ import annotations
 
 from typing import Dict, Iterable, List
 
-from .advanced_renderer import render_scientific_ui
 from .archetypes import ArchetypeRegistry
 from .authorship_qa import assert_rich_authorship, audit_rich_authorship
 from .content_lock import assert_locked_content, fidelity_record
+from .renderer_dispatch import render_scientific_ui
 from .schema import GenerationMode, ScientificGenerationResult, ScientificSlideSpec, VisualPlan
 from .strict_qa import qa_strict_native_ui
 from .theme import get_theme
