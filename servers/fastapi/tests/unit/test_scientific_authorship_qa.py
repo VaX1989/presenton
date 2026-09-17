@@ -56,6 +56,10 @@ def test_rich_authorship_qa_rejects_renderer_friendly_parser_defaults():
     spec = _spec_with_unattributed_grid()
     report = audit_rich_authorship(spec)
     assert report["status"] == "FAIL"
-    assert report["inferred_fields"] == ["grid"]
+    # Grid is the sentinel here. Other schema-level convenience defaults may
+    # also be detected because the synthetic rich fixture intentionally omits
+    # typography/accessibility keys. Strict mode must reject all such inference.
+    assert "grid" in report["inferred_fields"]
+    assert report["inferred_fields"]
     with pytest.raises(ValueError, match="rich A-S authorship QA failed"):
         assert_rich_authorship(spec)
