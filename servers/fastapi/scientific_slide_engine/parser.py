@@ -307,12 +307,18 @@ def _parse_rich(text: str, source_file: str) -> List[ScientificSlideSpec]:
             raise MasterParseError(f"duplicate global slide id G{gid:03d}")
         if lid in seen_local:
             raise MasterParseError(f"duplicate local slide id {lid}")
-        seen_global.add(gid); seen_local.add(lid)
+        seen_global.add(gid)
+        seen_local.add(lid)
         didactic = _structured_fields(sections["B"])
         base = _visible_content(sections["C"])
         locked = LockedContent(
-            title=base.title, subtitle=base.subtitle, visible_text=base.visible_text, callouts=base.callouts,
-            caption=base.caption, question=base.question, speaker_notes_final=_extract_notes(sections["M"]),
+            title=base.title,
+            subtitle=base.subtitle,
+            visible_text=base.visible_text,
+            callouts=base.callouts,
+            caption=base.caption,
+            question=base.question,
+            speaker_notes_final=_extract_notes(sections["M"]),
             raw_visible_copy=base.raw_visible_copy,
         )
         visual = _structured_fields(sections["E"])
@@ -320,8 +326,13 @@ def _parse_rich(text: str, source_file: str) -> List[ScientificSlideSpec]:
         typography = _structured_fields(sections["G"])
         accessibility = _structured_fields(sections["P"])
         specs.append(ScientificSlideSpec(
-            source_file=source_file, deck_id=deck_id, global_id=gid, local_id=lid, total_slides=total,
-            slide_type=_scalar(identity, ["SLIDE_TYPE", "TYPE"]), master_format=MasterFormat.RICH_A_S_MASTER,
+            source_file=source_file,
+            deck_id=deck_id,
+            global_id=gid,
+            local_id=lid,
+            total_slides=total,
+            slide_type=_scalar(identity, ["SLIDE_TYPE", "TYPE"]),
+            master_format=MasterFormat.RICH_A_S_MASTER,
             narrative_phase=_scalar(identity, ["NARRATIVE_PHASE", "PHASE"]),
             generality_level=_scalar(identity, ["GENERALITY_LEVEL", "GENERALITY", "LEVEL"]),
             priority=_scalar(identity, ["PRIORITY"]),
@@ -329,29 +340,46 @@ def _parse_rich(text: str, source_file: str) -> List[ScientificSlideSpec]:
             learning_objective=_scalar(didactic, ["LEARNING_OBJECTIVE"]),
             didactic_function=_scalar(didactic, ["DIDACTIC_FUNCTION"]),
             one_key_takeaway=_scalar(didactic, ["ONE_KEY_TAKEAWAY"]),
-            link_from_previous=_scalar(didactic, ["LINK_FROM_PREVIOUS"]), link_to_next=_scalar(didactic, ["LINK_TO_NEXT"]),
-            locked=locked, visual_thesis=_scalar(visual, ["VISUAL_THESIS"]), visual_type=_scalar(visual, ["VISUAL_TYPE"]),
-            composition=_scalar(visual, ["COMPOSITION"]), focal_point=_scalar(visual, ["FOCAL_POINT"]),
-            secondary_elements=_list_value(visual, ["SECONDARY_ELEMENTS"]), visual_hierarchy=_scalar(visual, ["VISUAL_HIERARCHY"]),
-            canvas=_scalar(layout, ["CANVAS"], "13.333 × 7.5"), background=_scalar(layout, ["BACKGROUND"]),
-            grid=_scalar(layout, ["GRID"], "12 columns"), safe_area=_scalar(layout, ["SAFE_AREA"], '0.55"'),
+            link_from_previous=_scalar(didactic, ["LINK_FROM_PREVIOUS"]),
+            link_to_next=_scalar(didactic, ["LINK_TO_NEXT"]),
+            locked=locked,
+            visual_thesis=_scalar(visual, ["VISUAL_THESIS"]),
+            visual_type=_scalar(visual, ["VISUAL_TYPE"]),
+            composition=_scalar(visual, ["COMPOSITION"]),
+            focal_point=_scalar(visual, ["FOCAL_POINT"]),
+            secondary_elements=_list_value(visual, ["SECONDARY_ELEMENTS"]),
+            visual_hierarchy=_scalar(visual, ["VISUAL_HIERARCHY"]),
+            canvas=_scalar(layout, ["CANVAS"]),
+            background=_scalar(layout, ["BACKGROUND"]),
+            grid=_scalar(layout, ["GRID"]),
+            safe_area=_scalar(layout, ["SAFE_AREA"]),
             element_map={**_section_dict(sections["F"]), "element_map": _scalar(layout, ["ELEMENT_MAP"])},
-            title_font=_scalar(typography, ["TITLE_FONT"], "Aptos Display"), title_size=_scalar(typography, ["TITLE_SIZE"], "37 pt"),
-            title_weight=_scalar(typography, ["TITLE_WEIGHT"], "Bold"), body_font=_scalar(typography, ["BODY_FONT"], "Aptos"),
-            body_size=_scalar(typography, ["BODY_SIZE"], "20 pt"), label_size=_scalar(typography, ["LABEL_SIZE"], "18 pt"),
-            footer_size=_scalar(typography, ["FOOTER_SIZE"], "11 pt"), alignment_rules=_scalar(typography, ["ALIGNMENT_RULES"]),
-            color_roles=_section_dict(sections["H"]), asset_specification=_section_dict(sections["I"]),
-            diagram_specification=_section_dict(sections["J"]), table_specification=_section_dict(sections["K"]),
+            title_font=_scalar(typography, ["TITLE_FONT"]),
+            title_size=_scalar(typography, ["TITLE_SIZE"]),
+            title_weight=_scalar(typography, ["TITLE_WEIGHT"]),
+            body_font=_scalar(typography, ["BODY_FONT"]),
+            body_size=_scalar(typography, ["BODY_SIZE"]),
+            label_size=_scalar(typography, ["LABEL_SIZE"]),
+            footer_size=_scalar(typography, ["FOOTER_SIZE"]),
+            alignment_rules=_scalar(typography, ["ALIGNMENT_RULES"]),
+            color_roles=_section_dict(sections["H"]),
+            asset_specification=_section_dict(sections["I"]),
+            diagram_specification=_section_dict(sections["J"]),
+            table_specification=_section_dict(sections["K"]),
             chart_specification=_section_dict(sections["L"]),
             instructor_cue=_scalar(_structured_fields(sections["N"]), ["INSTRUCTOR_CUE"], sections["N"]),
-            sources=_plain_list(sections["O"]), accessibility=_section_dict(sections["P"]),
-            reading_order=_scalar(accessibility, ["READING_ORDER"], "title → subtitle → visual → callout → footer"),
-            contrast=_scalar(accessibility, ["CONTRAST_NOTES", "CONTRAST"], "projector-safe"),
-            projector_readability=_scalar(accessibility, ["PROJECTOR_READABILITY"], "required"),
-            animation=_section_dict(sections["Q"]), production_constraints=_plain_list(sections["R"]),
+            sources=_plain_list(sections["O"]),
+            accessibility=_section_dict(sections["P"]),
+            reading_order=_scalar(accessibility, ["READING_ORDER"]),
+            contrast=_scalar(accessibility, ["CONTRAST_NOTES", "CONTRAST"]),
+            projector_readability=_scalar(accessibility, ["PROJECTOR_READABILITY"]),
+            animation=_section_dict(sections["Q"]),
+            production_constraints=_plain_list(sections["R"]),
             acceptance_criteria=_plain_list(sections["S"]),
-            raw_sections={SECTION_MAP[label]: sections[label] for label in SECTION_MAP}, unknown_sections={},
-            source_hash=_hash_block(source_file, deck_id, gid, lid, block), source_block=block,
+            raw_sections={SECTION_MAP[label]: sections[label] for label in SECTION_MAP},
+            unknown_sections={},
+            source_hash=_hash_block(source_file, deck_id, gid, lid, block),
+            source_block=block,
         ))
     _validate_sequence(specs, declared_count)
     return specs
@@ -364,7 +392,8 @@ def _parse_compact(text: str, source_file: str) -> List[ScientificSlideSpec]:
     if not matches:
         raise MasterParseError("no canonical G### slide headings found")
     specs: List[ScientificSlideSpec] = []
-    seen_global: set[int] = set(); seen_local: set[int] = set()
+    seen_global: set[int] = set()
+    seen_local: set[int] = set()
     for index, match in enumerate(matches):
         block = _norm(text[match.start() : matches[index + 1].start() if index + 1 < len(matches) else len(text)])
         fields = _parse_compact_fields(block)
@@ -376,23 +405,39 @@ def _parse_compact(text: str, source_file: str) -> List[ScientificSlideSpec]:
             raise MasterParseError(f"duplicate global slide id G{gid:03d}")
         if lid in seen_local:
             raise MasterParseError(f"duplicate local slide id {lid}")
-        seen_global.add(gid); seen_local.add(lid)
+        seen_global.add(gid)
+        seen_local.add(lid)
         base = _compact_visible_content(fields["VISIBLE COPY"])
         locked = LockedContent(
-            title=base.title, subtitle=base.subtitle, visible_text=base.visible_text, callouts=base.callouts,
-            caption=base.caption, question=base.question, speaker_notes_final=fields["NOTES"], raw_visible_copy=base.raw_visible_copy,
+            title=base.title,
+            subtitle=base.subtitle,
+            visible_text=base.visible_text,
+            callouts=base.callouts,
+            caption=base.caption,
+            question=base.question,
+            speaker_notes_final=fields["NOTES"],
+            raw_visible_copy=base.raw_visible_copy,
         )
         specs.append(ScientificSlideSpec(
-            source_file=source_file, deck_id=deck_id, global_id=gid, local_id=lid, total_slides=total,
-            slide_type=match.group("type").strip(), master_format=MasterFormat.COMPACT_FINAL_LEGACY,
-            generality_level=match.group("type").split("·", 1)[0].strip(), locked=locked,
-            visual_thesis=fields["VISUAL"], visual_type=fields["VISUAL"],
+            source_file=source_file,
+            deck_id=deck_id,
+            global_id=gid,
+            local_id=lid,
+            total_slides=total,
+            slide_type=match.group("type").strip(),
+            master_format=MasterFormat.COMPACT_FINAL_LEGACY,
+            generality_level=match.group("type").split("·", 1)[0].strip(),
+            locked=locked,
+            visual_thesis=fields["VISUAL"],
+            visual_type=fields["VISUAL"],
             diagram_specification={"canonical_visual": fields["VISUAL"], "raw": fields["VISUAL"]},
             sources=[s.strip() for s in re.split(r"\s*;\s*", fields["SOURCES"]) if s.strip()],
             accessibility={"alt_text_required": True, "no_color_only_meaning": True},
             production_constraints=["no_font_shrinking", "didactic_text>=18pt", "safe_area>=0.55in"],
             acceptance_criteria=["locked_copy_exact", "notes_exact", "editable_text", "projector_readable"],
-            raw_sections=fields, source_hash=_hash_block(source_file, deck_id, gid, lid, block), source_block=block,
+            raw_sections=fields,
+            source_hash=_hash_block(source_file, deck_id, gid, lid, block),
+            source_block=block,
         ))
     _validate_sequence(specs, declared_count)
     return specs
@@ -413,7 +458,12 @@ def _validate_sequence(specs: List[ScientificSlideSpec], declared_count: int | N
         raise MasterParseError("missing global slide ids")
 
 
-def validate_corpus(spec_groups: Iterable[Sequence[ScientificSlideSpec]], *, first_global_id: int = 1, last_global_id: int = 600) -> None:
+def validate_corpus(
+    spec_groups: Iterable[Sequence[ScientificSlideSpec]],
+    *,
+    first_global_id: int = 1,
+    last_global_id: int = 600,
+) -> None:
     specs = [spec for group in spec_groups for spec in group]
     ids = [spec.global_id for spec in specs]
     if len(ids) != len(set(ids)):
@@ -421,7 +471,8 @@ def validate_corpus(spec_groups: Iterable[Sequence[ScientificSlideSpec]], *, fir
         raise MasterParseError(f"duplicate global slide ids across corpus: {duplicates}")
     expected = list(range(first_global_id, last_global_id + 1))
     if sorted(ids) != expected:
-        missing = sorted(set(expected) - set(ids)); extras = sorted(set(ids) - set(expected))
+        missing = sorted(set(expected) - set(ids))
+        extras = sorted(set(ids) - set(expected))
         raise MasterParseError(f"corpus global-id mismatch; missing={missing}, extras={extras}")
 
 
