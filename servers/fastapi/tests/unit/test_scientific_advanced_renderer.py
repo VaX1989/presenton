@@ -24,6 +24,28 @@ CAUSAL_MASTER = """# DECK 99 — Synthetic causal chain
 **SOURCES:** S01.
 """
 
+HIERARCHY_MASTER = """# DECK 99 — Synthetic hierarchy
+- **DECK_ID:** 99
+- **Numero slide:** 1
+
+### G903 · 01/1 — GENERAL
+**VISIBLE COPY:** TITLE `Control hierarchy`. Steps: `Level one · Level two · Level three · Level four · Level five`.
+**VISUAL:** hierarchy pyramid ordered by robustness.
+**NOTES:** Exact hierarchy notes.
+**SOURCES:** S01.
+"""
+
+TIMELINE_MASTER = """# DECK 99 — Synthetic timeline
+- **DECK_ID:** 99
+- **Numero slide:** 1
+
+### G904 · 01/1 — GENERAL
+**VISIBLE COPY:** TITLE `Validated timeline`. Steps: `Stage A · Stage B · Stage C · Stage D · Stage E · Stage F`.
+**VISUAL:** timeline of ordered events.
+**NOTES:** Exact timeline notes.
+**SOURCES:** S01.
+"""
+
 
 def test_process_map_uses_differentiated_native_renderer():
     result = compile_strict(parse_master_text(PROCESS_MASTER, "process.md"))
@@ -50,3 +72,21 @@ def test_causal_chain_preserves_exact_locked_copy_without_rasterization():
     for locked in ("Causal chain", "Source", "Pathway", "Exposure", "Effect"):
         assert locked in rendered_text
     assert slide["speaker_notes_final"] == "Exact causal notes."
+
+
+def test_hierarchy_is_native_editable_and_safe():
+    slide = compile_strict(parse_master_text(HIERARCHY_MASTER, "hierarchy.md")).slides[0]
+    assert slide["archetype"] == "hierarchy"
+    assert slide["ui"]["scientific"]["renderer_variant"] == "advanced-scientific"
+    assert slide["ui_qa"]["status"] == "PASS"
+    assert slide["ui_qa"]["safe_area_status"] == "PASS"
+    assert slide["ui_qa"]["full_slide_raster_count"] == 0
+
+
+def test_timeline_clamps_text_inside_safe_area():
+    slide = compile_strict(parse_master_text(TIMELINE_MASTER, "timeline.md")).slides[0]
+    assert slide["archetype"] == "timeline"
+    assert slide["ui"]["scientific"]["renderer_variant"] == "advanced-scientific"
+    assert slide["ui_qa"]["status"] == "PASS"
+    assert slide["ui_qa"]["safe_area_status"] == "PASS"
+    assert not slide["ui_qa"]["out_of_bounds"]
