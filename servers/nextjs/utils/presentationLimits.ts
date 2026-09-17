@@ -1,7 +1,24 @@
-export const MAX_NUMBER_OF_SLIDES = 50;
+export const DEFAULT_MAX_NUMBER_OF_SLIDES = 100;
+export let MAX_NUMBER_OF_SLIDES = DEFAULT_MAX_NUMBER_OF_SLIDES;
 export const MAX_OUTLINE_CONTENT_WORDS = 100;
 
+let MAX_SLIDES_SOURCE: "default" | "fastapi" = "default";
+
 const WORD_PATTERN = /\S+/g;
+
+export function setMaxNumberOfSlidesFromCapability(value: unknown): number {
+  const parsed = typeof value === "number" ? value : Number(value);
+  if (!Number.isFinite(parsed) || parsed <= 0 || !Number.isInteger(parsed)) {
+    throw new Error("FastAPI max_slides capability must be a positive integer");
+  }
+  MAX_NUMBER_OF_SLIDES = parsed;
+  MAX_SLIDES_SOURCE = "fastapi";
+  return MAX_NUMBER_OF_SLIDES;
+}
+
+export function getMaxSlidesSource(): "default" | "fastapi" {
+  return MAX_SLIDES_SOURCE;
+}
 
 export function countOutlineWords(value: string): number {
   return value.match(WORD_PATTERN)?.length ?? 0;

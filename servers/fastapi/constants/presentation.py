@@ -1,25 +1,34 @@
 import os
 from pathlib import Path
 
-MAX_NUMBER_OF_SLIDES = 50
+DEFAULT_MAX_NUMBER_OF_SLIDES = 100
 DEFAULT_MAX_OUTLINE_WORDS = 100
 
 
-def get_max_outline_words() -> int:
-    raw_value = (os.getenv("MAX_OUTLINE_WORDS") or "").strip()
+def _read_positive_int_env(name: str, default: int) -> int:
+    raw_value = (os.getenv(name) or "").strip()
     if not raw_value:
-        return DEFAULT_MAX_OUTLINE_WORDS
+        return default
 
     try:
         value = int(raw_value)
     except ValueError as exc:
-        raise ValueError("MAX_OUTLINE_WORDS must be a positive integer") from exc
+        raise ValueError(f"{name} must be a positive integer") from exc
 
     if value <= 0:
-        raise ValueError("MAX_OUTLINE_WORDS must be a positive integer")
+        raise ValueError(f"{name} must be a positive integer")
     return value
 
 
+def get_max_number_of_slides() -> int:
+    return _read_positive_int_env("PRESENTON_MAX_SLIDES", DEFAULT_MAX_NUMBER_OF_SLIDES)
+
+
+def get_max_outline_words() -> int:
+    return _read_positive_int_env("MAX_OUTLINE_WORDS", DEFAULT_MAX_OUTLINE_WORDS)
+
+
+MAX_NUMBER_OF_SLIDES = get_max_number_of_slides()
 MAX_OUTLINE_CONTENT_WORDS = get_max_outline_words()
 
 _PREFERRED_TEMPLATE_ORDER = [
