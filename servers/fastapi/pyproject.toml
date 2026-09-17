@@ -51,6 +51,7 @@ include = [
     "constants*",
     "utils*",
     "templates*",
+    "scientific_slide_engine*",
 ]
 
 [tool.pyright]
