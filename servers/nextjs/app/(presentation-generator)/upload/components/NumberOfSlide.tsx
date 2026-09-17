@@ -1,14 +1,26 @@
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { clampSlideCountValue, MAX_NUMBER_OF_SLIDES } from '@/utils/presentationLimits';
-import React, { useState } from 'react'
+import { clampSlideCountValue } from '@/utils/presentationLimits';
+import { usePresentationCapabilities } from '@/utils/usePresentationCapabilities';
+import React, { useEffect, useState } from 'react'
 
 const SLIDE_OPTIONS: string[] = ["5", "8", "9", "10", "11", "12", "13", "14", "15", "16", "17", "18", "19", "20"];
 
 const NumberOfSlide = ({ value, onValueChange }: { value: string, onValueChange: (value: string) => void }) => {
+    const capabilities = usePresentationCapabilities();
     const [customInput, setCustomInput] = useState(
         value && !SLIDE_OPTIONS.includes(value) ? value : ""
     );
+
+    useEffect(() => {
+        if (!capabilities.available) return;
+        const numeric = Number(value);
+        if (Number.isFinite(numeric) && numeric > capabilities.maxSlides) {
+            const clamped = String(capabilities.maxSlides);
+            onValueChange(clamped);
+            setCustomInput(clamped);
+        }
+    }, [capabilities.available, capabilities.maxSlides, onValueChange, value]);
 
     const sanitizeToPositiveInteger = (raw: string): string => {
         return clampSlideCountValue(raw);
@@ -29,9 +41,8 @@ const NumberOfSlide = ({ value, onValueChange }: { value: string, onValueChange:
                 <SelectValue placeholder="Select Slides" />
             </SelectTrigger>
             <SelectContent className="font-manrope">
-                {/* Sticky custom input at the top */}
                 <div
-                    className="sticky top-0 z-10 bg-white  p-2 border-b"
+                    className="sticky top-0 z-10 bg-white p-2 border-b"
                     onMouseDown={(e) => e.stopPropagation()}
                     onPointerDown={(e) => e.stopPropagation()}
                     onClick={(e) => e.stopPropagation()}
@@ -40,7 +51,7 @@ const NumberOfSlide = ({ value, onValueChange }: { value: string, onValueChange:
                         <Input
                             inputMode="numeric"
                             pattern="[0-9]*"
-                            max={MAX_NUMBER_OF_SLIDES}
+                            max={capabilities.maxSlides}
                             value={customInput}
                             onMouseDown={(e) => e.stopPropagation()}
                             onPointerDown={(e) => e.stopPropagation()}
@@ -61,9 +72,15 @@ const NumberOfSlide = ({ value, onValueChange }: { value: string, onValueChange:
                         />
                         <span className="text-sm font-medium">slides</span>
                     </div>
+                    <div
+                        className="mt-1 text-[10px] text-slate-500"
+                        title={capabilities.error}
+                        data-capability-source={capabilities.source}
+                    >
+                        max {capabilities.maxSlides} · {capabilities.source === "fastapi" ? "server capability" : "fallback until server responds"}
+                    </div>
                 </div>
 
-                {/* Hidden item to allow SelectValue to render custom selection */}
                 {value && !SLIDE_OPTIONS.includes(value) && (
                     <SelectItem value={value} className="hidden">
                         {value} slides
