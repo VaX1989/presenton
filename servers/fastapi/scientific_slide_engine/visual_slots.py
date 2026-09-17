@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import re
 from dataclasses import dataclass
-from typing import Dict, Iterable, List, Mapping
+from typing import Dict, List, Mapping
 
 from .schema import ScientificSlideSpec
 
@@ -36,7 +36,7 @@ def _raw(mapping: Mapping[str, object] | None) -> str:
 
 
 def _quoted(text: str) -> List[str]:
-    values = re.findall(r"[\"“]([^\"”]+)[\"”]", text)
+    values = re.findall(r'[\"“]([^\"”]+)[\"”]', text)
     return [value.strip() for value in values if value.strip()]
 
 
@@ -47,10 +47,17 @@ def _split_labels(value: str) -> List[str]:
     value = value.strip()
     if not value or value.upper() in {"NONE", "N/A", "NA"}:
         return []
-    return [part.strip(" .") for part in re.split(r"\s*(?:;|,|\|)\s*", value) if part.strip(" .")]
+    return [
+        part.strip(" .")
+        for part in re.split(r"\s*(?:;|,|\|)\s*", value)
+        if part.strip(" .")
+    ]
 
 
-def field_labels(mapping: Mapping[str, object] | None, *keys: str) -> List[str]:
+def field_labels(
+    mapping: Mapping[str, object] | None,
+    *keys: str,
+) -> List[str]:
     if not mapping:
         return []
     for key in keys:
@@ -73,8 +80,6 @@ def exact_visual_labels(spec: ScientificSlideSpec) -> List[str]:
         return labels
     labels = field_labels(spec.diagram_specification, "nodes")
     if labels:
-        # Node records sometimes include coordinates after the label. Preserve a
-        # quoted authored label when present; otherwise retain the authored node.
         return labels
     labels = field_labels(spec.table_specification, "exact_cell_content")
     if labels:
@@ -112,7 +117,14 @@ def _parse_markdown_table(raw: str) -> Dict[str, LayoutBox]:
         box_id = cells[0]
         if not re.fullmatch(r"[A-Za-z][A-Za-z0-9_-]*", box_id):
             continue
-        boxes[box_id] = LayoutBox(box_id, cells[1] or box_id, x, y, w, h)
+        boxes[box_id] = LayoutBox(
+            box_id,
+            cells[1] or box_id,
+            x,
+            y,
+            w,
+            h,
+        )
     return boxes
 
 
@@ -129,21 +141,92 @@ def _parse_inline_boxes(raw: str) -> Dict[str, LayoutBox]:
     for match in pattern.finditer(raw):
         box_id = match.group("id")
         boxes[box_id] = LayoutBox(
-            box_id, box_id,
-            float(match.group("x")), float(match.group("y")),
-            float(match.group("w")), float(match.group("h")),
+            box_id,
+            box_id,
+            float(match.group("x")),
+            float(match.group("y")),
+            float(match.group("w")),
+            float(match.group("h")),
         )
     return boxes
 
 
-def authored_layout_boxes(spec: ScientificSlideSpec) -> Dict[str, dict[str, float | str]]:
+_ROLE_ALIASES: dict[str, tuple[str, ...]] = {
+    "title": ("TITLE", "T1"),
+    "subtitle": ("SUBTITLE", "S1"),
+    "footer": ("FOOTER", "F1"),
+    "question": ("QUESTION", "Q1"),
+    "caption": ("CAPTION",),
+    "callout": ("CALLOUT", "B1"),
+    "copy": ("COPY", "L1"),
+    "text": ("COPY", "L1"),
+    "body": ("COPY", "L1"),
+    "diagram": ("D1", "V1"),
+    "hierarchy": ("D1", "V1"),
+    "process": ("D1", "P1"),
+    "profile": ("D1", "V1"),
+    "network": ("D1", "V1"),
+    "timeline": ("D1", "V1"),
+    "visual": ("D1", "V1"),
+    "flow": ("D1", "P1"),
+    "system": ("D1", "V1"),
+    "scenario": ("D1", "V1"),
+    "layers": ("D1", "V1"),
+    "matrix": ("M1", "TABLE"),
+    "table": ("M1", "TABLE"),
+    "chart": ("CH1",),
+    "distribution": ("CH1",),
+    "axis": ("AXIS",),
+}
+
+
+def _aliases_for(box: LayoutBox) -> tuple[str, ...]:
+    tokens = {
+        re.sub(r"[^a-z0-9]+", "", box.id.casefold()),
+        re.sub(r"[^a-z0-9]+", "", box.role.casefold()),
+    }
+    aliases: list[str] = []
+    for role, role_aliases in _ROLE_ALIASES.items():
+        role_token = re.sub(r"[^a-z0-9]+", "", role)
+        if any(
+            token == role_token
+            or token.startswith(role_token)
+            or role_token in token
+            for token in tokens
+            if token
+        ):
+            for alias in role_aliases:
+                if alias not in aliases:
+                    aliases.append(alias)
+    return tuple(aliases)
+
+
+def authored_layout_boxes(
+    spec: ScientificSlideSpec,
+) -> Dict[str, dict[str, float | str]]:
     raw = ""
     if isinstance(spec.element_map, dict):
-        raw = str(spec.element_map.get("element_map", "") or spec.element_map.get("raw", "") or "")
+        raw = str(
+            spec.element_map.get("element_map", "")
+            or spec.element_map.get("raw", "")
+            or ""
+        )
     boxes = _parse_markdown_table(raw)
     if not boxes:
         boxes = _parse_inline_boxes(raw)
-    return {box_id: box.as_pixels() for box_id, box in boxes.items()}
+
+    result: Dict[str, dict[str, float | str]] = {}
+    for box_id, box in boxes.items():
+        pixel_box = box.as_pixels()
+        # Preserve authored identifiers verbatim and case-insensitively.
+        result[box_id] = pixel_box
+        result.setdefault(box_id.upper(), pixel_box)
+        result.setdefault(box.role, pixel_box)
+        result.setdefault(box.role.upper(), pixel_box)
+        # Also expose stable semantic aliases consumed by generic renderers.
+        for alias in _aliases_for(box):
+            result.setdefault(alias, pixel_box)
+    return result
 
 
 def visual_slot_summary(spec: ScientificSlideSpec) -> dict[str, object]:
