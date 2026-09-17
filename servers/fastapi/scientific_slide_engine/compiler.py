@@ -4,13 +4,16 @@ from typing import Dict, Iterable, List
 
 from .archetypes import ArchetypeRegistry
 from .content_lock import assert_locked_content, fidelity_record
-from .renderer import qa_native_ui, render_native_ui
+from .native_renderer_v2 import qa_native_ui, render_native_ui_v2
 from .schema import GenerationMode, ScientificGenerationResult, ScientificSlideSpec, VisualPlan
 from .theme import get_theme
+from .visual_slots import visual_slot_summary
 
 
 def _node_count(spec: ScientificSlideSpec) -> int:
-    return max(len(spec.locked.visible_text), len(spec.locked.callouts), 1)
+    slots = visual_slot_summary(spec)
+    authored = slots.get("authored_labels") or []
+    return max(len(authored), len(spec.locked.visible_text), len(spec.locked.callouts), 1)
 
 
 def _visual_descriptor(spec: ScientificSlideSpec) -> str:
@@ -27,6 +30,7 @@ def plan_visual(spec: ScientificSlideSpec, theme: str, dark: bool | None = None)
     if dark is None:
         dark = "#17324d" in (spec.background or "").casefold() or "navy" in (spec.background or "").casefold()
     archetype = registry.resolve(_visual_descriptor(spec), dark=dark, node_count=_node_count(spec))
+    slots = visual_slot_summary(spec)
     return VisualPlan(
         global_id=spec.global_id,
         archetype=archetype.id,
@@ -36,7 +40,7 @@ def plan_visual(spec: ScientificSlideSpec, theme: str, dark: bool | None = None)
         geometry={
             "slots": archetype.required_slots + archetype.optional_slots,
             "constraints": archetype.layout_constraints,
-            "canonical_element_map": spec.element_map,
+            "authored": slots,
         },
     )
 
@@ -50,32 +54,28 @@ def _element_text(element: Dict[str, object]) -> str:
     return "".join(str(run.get("text", "")) for run in runs if isinstance(run, dict))
 
 
-def _sanitize_native_ui(spec: ScientificSlideSpec, ui: Dict[str, object]) -> Dict[str, object]:
-    """Remove renderer helper labels unless the canonical master explicitly specifies them."""
-    source = spec.source_block.casefold()
+def _strict_text_audit(spec: ScientificSlideSpec, ui: Dict[str, object]) -> None:
+    """Reject visible renderer prose that has no provenance in the canonical master."""
+    source = spec.source_block.casefold().replace("\n", " ")
     elements = ui.get("elements")
     if not isinstance(elements, list):
-        return ui
-    clean = []
+        raise ValueError(f"G{spec.global_id:03d}: native UI has no element list")
+    invented: list[str] = []
     for element in elements:
-        if not isinstance(element, dict):
-            clean.append(element)
+        if not isinstance(element, dict) or element.get("type") != "text" or element.get("decorative"):
             continue
-        name = str(element.get("name") or "")
         text = _element_text(element).strip()
-        if name == "loop-center" and text.casefold() not in source:
+        if not text:
             continue
-        if name == "locked-visible-text" and text == "SISTEMA" and "sistema" not in source:
-            continue
-        if name == "hierarchy-axis" and text.replace("\n", " ").casefold() not in source.replace("\n", " "):
-            continue
-        clean.append(element)
-    ui["elements"] = clean
-    return ui
+        if text.casefold().replace("\n", " ") not in source:
+            invented.append(text)
+    if invented:
+        raise ValueError(f"G{spec.global_id:03d}: strict renderer emitted unsourced visible text: {invented}")
 
 
 def _slide_record(spec: ScientificSlideSpec, plan: VisualPlan, theme_id: str) -> Dict[str, object]:
-    ui = _sanitize_native_ui(spec, render_native_ui(spec, plan, theme_id))
+    ui = render_native_ui_v2(spec, plan, theme_id)
+    _strict_text_audit(spec, ui)
     return {
         "source_hash": spec.source_hash,
         "global_id": spec.global_id,
