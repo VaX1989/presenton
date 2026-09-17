@@ -2,12 +2,17 @@ from __future__ import annotations
 
 from dataclasses import asdict, dataclass, field
 from enum import Enum
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Literal, Optional
 
 
 class GenerationMode(str, Enum):
     STRICT_MATERIALIZE = "strict_materialize"
     VISUAL_ENHANCE = "visual_enhance"
+
+
+class MasterFormat(str, Enum):
+    RICH_A_S_MASTER = "rich_a_s_master"
+    COMPACT_FINAL_LEGACY = "compact_final_legacy"
 
 
 @dataclass(frozen=True)
@@ -33,6 +38,7 @@ class ScientificSlideSpec:
     local_id: int
     total_slides: int
     slide_type: str
+    master_format: MasterFormat = MasterFormat.COMPACT_FINAL_LEGACY
     narrative_phase: str = ""
     generality_level: str = ""
     priority: str = ""
@@ -76,11 +82,46 @@ class ScientificSlideSpec:
     animation: Dict[str, Any] = field(default_factory=dict)
     production_constraints: List[str] = field(default_factory=list)
     acceptance_criteria: List[str] = field(default_factory=list)
+    raw_sections: Dict[str, str] = field(default_factory=dict)
+    unknown_sections: Dict[str, str] = field(default_factory=dict)
     source_hash: str = ""
     source_block: str = ""
 
     def as_dict(self, include_source_block: bool = False) -> Dict[str, Any]:
         data = asdict(self)
+        data["master_format"] = self.master_format.value
         if not include_source_block:
             data.pop("source_block", None)
+        return data
+
+
+@dataclass(frozen=True)
+class VisualPlan:
+    global_id: int
+    archetype: str
+    variant: str
+    theme: str
+    background: Literal["light", "dark"]
+    geometry: Dict[str, Any] = field(default_factory=dict)
+    notes_supported: bool = True
+
+    def as_dict(self) -> Dict[str, Any]:
+        return asdict(self)
+
+
+@dataclass(frozen=True)
+class ScientificGenerationResult:
+    mode: GenerationMode
+    theme: str
+    slides: List[Dict[str, Any]]
+    visual_plans: List[VisualPlan]
+    source_hashes: Dict[str, str]
+    content_lock_status: str
+    speaker_notes_supported: bool
+    render_contract: str = "presenton_native_strict_ir"
+
+    def as_dict(self) -> Dict[str, Any]:
+        data = asdict(self)
+        data["mode"] = self.mode.value
+        data["visual_plans"] = [p.as_dict() for p in self.visual_plans]
         return data
