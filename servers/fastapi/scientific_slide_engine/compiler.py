@@ -6,8 +6,8 @@ from .advanced_renderer import render_scientific_ui
 from .archetypes import ArchetypeRegistry
 from .authorship_qa import assert_rich_authorship, audit_rich_authorship
 from .content_lock import assert_locked_content, fidelity_record
-from .native_renderer_v2 import qa_native_ui
 from .schema import GenerationMode, ScientificGenerationResult, ScientificSlideSpec, VisualPlan
+from .strict_qa import qa_strict_native_ui
 from .theme import get_theme
 from .visual_slots import visual_slot_summary
 
@@ -124,7 +124,7 @@ def _slide_record(
         "render_contract": "presenton_native_template_v2_ui",
         "authorship_qa": audit_rich_authorship(spec),
         "ui": ui,
-        "ui_qa": qa_native_ui(ui),
+        "ui_qa": qa_strict_native_ui(ui),
     }
 
 
