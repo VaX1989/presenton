@@ -2,10 +2,11 @@ from __future__ import annotations
 
 from typing import Dict, Iterable, List
 
+from .advanced_renderer import render_scientific_ui
 from .archetypes import ArchetypeRegistry
 from .authorship_qa import assert_rich_authorship, audit_rich_authorship
 from .content_lock import assert_locked_content, fidelity_record
-from .native_renderer_v2 import qa_native_ui, render_native_ui_v2
+from .native_renderer_v2 import qa_native_ui
 from .schema import GenerationMode, ScientificGenerationResult, ScientificSlideSpec, VisualPlan
 from .theme import get_theme
 from .visual_slots import visual_slot_summary
@@ -103,7 +104,7 @@ def _slide_record(
     plan: VisualPlan,
     theme_id: str,
 ) -> Dict[str, object]:
-    ui = render_native_ui_v2(spec, plan, theme_id)
+    ui = render_scientific_ui(spec, plan, theme_id)
     _strict_text_audit(spec, ui)
     return {
         "source_hash": spec.source_hash,
