@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from dataclasses import asdict, dataclass, field
 from enum import Enum
-from typing import Any, Dict, List, Literal, Optional
+from typing import Any, Dict, List, Literal
 
 
 class GenerationMode(str, Enum):
@@ -55,18 +55,21 @@ class ScientificSlideSpec:
     focal_point: str = ""
     secondary_elements: List[str] = field(default_factory=list)
     visual_hierarchy: str = ""
-    canvas: str = "13.333x7.5in"
+    # Production fields deliberately have no plausible-looking defaults. Rich
+    # canonical values must come from A-S source sections. Legacy compact decks
+    # may still be rendered through renderer-level compatibility fallbacks.
+    canvas: str = ""
     background: str = ""
-    grid: str = "12 columns"
-    safe_area: str = ">=0.55in"
+    grid: str = ""
+    safe_area: str = ""
     element_map: Dict[str, Any] = field(default_factory=dict)
-    title_font: str = "Aptos Display"
-    title_size: str = "36-40pt"
-    title_weight: str = "semibold"
-    body_font: str = "Aptos"
-    body_size: str = "20-24pt"
-    label_size: str = ">=18pt"
-    footer_size: str = "9.5-11pt"
+    title_font: str = ""
+    title_size: str = ""
+    title_weight: str = ""
+    body_font: str = ""
+    body_size: str = ""
+    label_size: str = ""
+    footer_size: str = ""
     alignment_rules: str = ""
     color_roles: Dict[str, str] = field(default_factory=dict)
     asset_specification: Dict[str, Any] = field(default_factory=dict)
@@ -76,9 +79,9 @@ class ScientificSlideSpec:
     instructor_cue: str = ""
     sources: List[str] = field(default_factory=list)
     accessibility: Dict[str, Any] = field(default_factory=dict)
-    reading_order: str = "title>subtitle>visual>callout>footer"
-    contrast: str = "projector-safe"
-    projector_readability: str = "required"
+    reading_order: str = ""
+    contrast: str = ""
+    projector_readability: str = ""
     animation: Dict[str, Any] = field(default_factory=dict)
     production_constraints: List[str] = field(default_factory=list)
     acceptance_criteria: List[str] = field(default_factory=list)
