@@ -1,4 +1,9 @@
-export const MAX_NUMBER_OF_SLIDES = 50;
+const DEFAULT_MAX_NUMBER_OF_SLIDES = 100;
+export const MAX_NUMBER_OF_SLIDES = Number(
+  process.env.NEXT_PUBLIC_PRESENTON_MAX_SLIDES ||
+    process.env.PRESENTON_MAX_SLIDES ||
+    DEFAULT_MAX_NUMBER_OF_SLIDES
+);
 export const MAX_OUTLINE_CONTENT_WORDS = 100;
 
 const WORD_PATTERN = /\S+/g;
