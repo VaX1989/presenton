@@ -73,8 +73,42 @@ def field_labels(
     return []
 
 
+def _canonical_reference_labels(
+    spec: ScientificSlideSpec,
+    value: object,
+) -> List[str] | None:
+    if not isinstance(value, str):
+        return None
+    normalized = value.casefold().replace("_", " ").replace("-", " ")
+    references_visible = any(
+        token in normalized
+        for token in (
+            "visible text",
+            "visible copy",
+            "copy visibile",
+            "testo visibile",
+        )
+    )
+    if not references_visible:
+        return None
+    labels = list(spec.locked.visible_text)
+    for extra in _quoted(value):
+        if extra not in labels:
+            labels.append(extra)
+    return labels
+
+
 def exact_visual_labels(spec: ScientificSlideSpec) -> List[str]:
-    """Return only labels authored in the canonical visual/table/chart specification."""
+    """Return labels authored directly or referenced from canonical visible copy.
+
+    Rich masters commonly use ``EXACT_LABELS: visible text`` as a pointer to
+    section C. That phrase is metadata, never a literal label to render.
+    """
+    if isinstance(spec.diagram_specification, dict):
+        exact_value = spec.diagram_specification.get("exact_labels")
+        referenced = _canonical_reference_labels(spec, exact_value)
+        if referenced is not None:
+            return referenced
     labels = field_labels(spec.diagram_specification, "exact_labels")
     if labels:
         return labels
@@ -218,12 +252,10 @@ def authored_layout_boxes(
     result: Dict[str, dict[str, float | str]] = {}
     for box_id, box in boxes.items():
         pixel_box = box.as_pixels()
-        # Preserve authored identifiers verbatim and case-insensitively.
         result[box_id] = pixel_box
         result.setdefault(box_id.upper(), pixel_box)
         result.setdefault(box.role, pixel_box)
         result.setdefault(box.role.upper(), pixel_box)
-        # Also expose stable semantic aliases consumed by generic renderers.
         for alias in _aliases_for(box):
             result.setdefault(alias, pixel_box)
     return result
