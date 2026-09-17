@@ -41,8 +41,41 @@ def plan_visual(spec: ScientificSlideSpec, theme: str, dark: bool | None = None)
     )
 
 
+def _element_text(element: Dict[str, object]) -> str:
+    if element.get("type") != "text":
+        return ""
+    runs = element.get("runs")
+    if not isinstance(runs, list):
+        return ""
+    return "".join(str(run.get("text", "")) for run in runs if isinstance(run, dict))
+
+
+def _sanitize_native_ui(spec: ScientificSlideSpec, ui: Dict[str, object]) -> Dict[str, object]:
+    """Remove renderer helper labels unless the canonical master explicitly specifies them."""
+    source = spec.source_block.casefold()
+    elements = ui.get("elements")
+    if not isinstance(elements, list):
+        return ui
+    clean = []
+    for element in elements:
+        if not isinstance(element, dict):
+            clean.append(element)
+            continue
+        name = str(element.get("name") or "")
+        text = _element_text(element).strip()
+        if name == "loop-center" and text.casefold() not in source:
+            continue
+        if name == "locked-visible-text" and text == "SISTEMA" and "sistema" not in source:
+            continue
+        if name == "hierarchy-axis" and text.replace("\n", " ").casefold() not in source.replace("\n", " "):
+            continue
+        clean.append(element)
+    ui["elements"] = clean
+    return ui
+
+
 def _slide_record(spec: ScientificSlideSpec, plan: VisualPlan, theme_id: str) -> Dict[str, object]:
-    ui = render_native_ui(spec, plan, theme_id)
+    ui = _sanitize_native_ui(spec, render_native_ui(spec, plan, theme_id))
     return {
         "source_hash": spec.source_hash,
         "global_id": spec.global_id,
