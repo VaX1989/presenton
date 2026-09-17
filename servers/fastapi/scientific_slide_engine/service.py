@@ -55,11 +55,14 @@ async def persist_strict_presentation(
     title: str | None = None,
     language: str = "en",
 ):
-    """Persist strict native UI as the normal Presenton Presentation/Slide rows."""
+    """Persist strict native UI as normal Presenton rows, atomically gated by fidelity."""
     from models.sql.presentation import PresentationModel, PresentationVersion
     from models.sql.slide import SlideModel
 
     validate_request_count(specs)
+    if len(result.slides) != len(specs):
+        raise ValueError(f"strict result count mismatch: {len(result.slides)} != {len(specs)}")
+
     presentation_id = uuid.uuid4()
     presentation = PresentationModel(
         id=presentation_id,
@@ -79,33 +82,47 @@ async def persist_strict_presentation(
     slides: List[SlideModel] = []
     for index, (spec, rendered) in enumerate(zip(specs, result.slides)):
         content = build_persisted_slide_content(spec, rendered)
-        slide = SlideModel(
-            presentation=presentation_id,
-            layout_group="scientific-editorial",
-            layout=str(rendered["archetype"]),
-            index=index,
-            content=content,
-            speaker_note=spec.locked.speaker_notes_final,
-            properties={
-                "scientific": {
-                    "source_hash": spec.source_hash,
-                    "global_id": spec.global_id,
-                    "local_id": spec.local_id,
-                    "theme": result.theme,
-                    "render_contract": result.render_contract,
-                }
-            },
-            ui=rendered["ui"],
+        slides.append(
+            SlideModel(
+                presentation=presentation_id,
+                layout_group="scientific-editorial",
+                layout=str(rendered["archetype"]),
+                index=index,
+                content=content,
+                speaker_note=spec.locked.speaker_notes_final,
+                properties={
+                    "scientific": {
+                        "source_hash": spec.source_hash,
+                        "global_id": spec.global_id,
+                        "local_id": spec.local_id,
+                        "theme": result.theme,
+                        "render_contract": result.render_contract,
+                    }
+                },
+                ui=rendered["ui"],
+            )
         )
-        slides.append(slide)
     sql_session.add_all(slides)
+
+    # Flush creates/validates database rows inside the current transaction without
+    # making an invalid strict deck durable. Compare the exact fields that the
+    # editor/export pipeline will read before committing anything.
+    await sql_session.flush()
+    persisted_views = [persisted_locked_view(slide.content, slide.speaker_note) for slide in slides]
+    fidelity = compile_fidelity(specs, persisted_views)
+    if any(record["status"] != "PASS" for record in fidelity):
+        await sql_session.rollback()
+        raise RuntimeError("strict content lock failed before Presenton commit")
+
     await sql_session.commit()
     await sql_session.refresh(presentation)
     for slide in slides:
         await sql_session.refresh(slide)
 
-    persisted_views = [persisted_locked_view(slide.content, slide.speaker_note) for slide in slides]
-    fidelity = compile_fidelity(specs, persisted_views)
-    if any(record["status"] != "PASS" for record in fidelity):
-        raise RuntimeError("strict content lock failed after Presenton persistence")
-    return presentation, slides, fidelity
+    # A post-commit readback is still verified. At this point a failure indicates
+    # an unexpected persistence-layer mutation and is surfaced as a hard error.
+    readback = [persisted_locked_view(slide.content, slide.speaker_note) for slide in slides]
+    readback_fidelity = compile_fidelity(specs, readback)
+    if any(record["status"] != "PASS" for record in readback_fidelity):
+        raise RuntimeError("strict content lock failed after Presenton commit readback")
+    return presentation, slides, readback_fidelity
